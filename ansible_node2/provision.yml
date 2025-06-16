@@ -1,0 +1,62 @@
+---
+- name: Сustomization  
+  hosts: servers  
+  become: yes  
+  tasks:
+  - name: Update and upgrade apt packages
+    apt:
+      update_cache: yes
+      upgrade: yes
+
+  - name: install packages
+    apt:
+      name: 
+        - postgresql
+        - postgresql-contrib        
+        - libpq-dev
+        - python3-psycopg2
+        - acl
+        - barman-cli
+      state: latest
+      update_cache: true
+
+  - name: Stop postgresql@14-main.service
+    ansible.builtin.service:
+      name: postgresql@14-main.service
+      state: stopped
+  
+  - name: Remove files from data catalog
+    file:
+      path: /var/lib/postgresql/14/main/
+      state: absent
+
+#pg_basebackup -h 192.168.57.11 -U replication -p 5432 -D /var/lib/postgresql/14/main/ -R -P
+
+   #Копируем данные с node1 на node2
+  - name: copy files from master to slave
+    become_user: postgres
+    expect:
+      command: 'pg_basebackup -h 192.168.57.11 -U replication -p 5432 -D /var/lib/postgresql/14/main/ -R -P'
+      responses: 
+        '.*Password*': "Otus2025!"  
+
+  - name: copy postgresql.conf
+    copy:
+      src: postgresql.conf 
+      dest: /etc/postgresql/14/main/postgresql.conf
+      owner: postgres
+      group: postgres
+      mode: 0644
+
+  - name: copy pg_hba.conf
+    copy:
+      src: pg_hba.conf
+      dest: /etc/postgresql/14/main/pg_hba.conf
+      owner: postgres
+      group: postgres
+      mode: 0640
+
+  - name: Restart postgresql@14-main.service
+    ansible.builtin.service:
+      name: postgresql@14-main.service
+      state: restarted

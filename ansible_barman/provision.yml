@@ -1,0 +1,66 @@
+---
+- name: Сustomization  
+  hosts: servers  
+  become: yes  
+  tasks:
+  - name: Update and upgrade apt packages
+    apt:
+      update_cache: yes
+      upgrade: yes
+
+  - name: install packages
+    apt:
+      name: 
+        - postgresql
+        - barman        
+        - barman-cli
+      state: latest
+      update_cache: true
+
+  #- name: Creates directoty .ssh
+  #  ansible.builtin.file:
+  #    path: /var/lib/barman/.ssh
+  #    state: directory
+  #    owner: barman
+  #    group: barman
+  #    mode: 0777
+
+  #- name: copy authorized_keys
+  #  copy:
+  #    src: authorized_keys 
+  #    dest: /var/lib/barman/.ssh/authorized_keys
+  #    owner: barman
+  #    group: barman
+  #    mode: 0777
+
+  - name: copy .ssh
+    copy:
+      src: .ssh
+      dest: /var/lib/barman/
+      owner: barman
+      group: barman
+      mode: 0600
+
+  - name: copy .pgpass
+    copy:
+      src: .pgpass 
+      dest: /var/lib/barman/.pgpass
+      owner: barman
+      group: barman
+      mode: 0600
+
+  - name: copy barman.conf
+    copy:
+      src: barman.conf
+      dest: /etc/barman.conf
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: copy node1.conf
+    copy:
+      src: node1.conf
+      dest: /etc/barman.d/node1.conf
+      owner: root
+      group: root
+      mode: 0644

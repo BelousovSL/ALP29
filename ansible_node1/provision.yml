@@ -1,0 +1,80 @@
+---
+- name: Сustomization  
+  hosts: servers  
+  become: yes  
+  tasks:
+  - name: Update and upgrade apt packages
+    apt:
+      update_cache: yes
+      upgrade: yes
+
+  - name: install packages
+    apt:
+      name: 
+        - postgresql
+        - postgresql-contrib        
+        - libpq-dev
+        - python3-psycopg2
+        - acl
+        - barman-cli
+      state: latest
+      update_cache: true
+
+  - name: Start postgresql@14-main.service
+    ansible.builtin.service:
+      name: postgresql@14-main.service
+      enabled: yes
+      state: started
+
+  - name: copy .ssh
+    copy:
+      src: .ssh
+      dest: /var/lib/postgresql/
+      owner: postgres
+      group: postgres
+      mode: 0600
+
+  - name: Create replicator user
+    become: true
+    become_user: postgres
+    community.postgresql.postgresql_user:
+      name: replication
+      password: Otus2025!
+      role_attr_flags: REPLICATION 
+    ignore_errors: true
+
+  - name: Create replicator user barman
+    become: true
+    become_user: postgres
+    community.postgresql.postgresql_user:
+      name: barman
+      password: Otus2025!
+      role_attr_flags: SUPERUSER 
+    ignore_errors: true
+
+  - name: copy postgresql.conf
+    copy:
+      src: postgresql.conf 
+      dest: /etc/postgresql/14/main/postgresql.conf
+      owner: postgres
+      group: postgres
+      mode: 0644
+
+  - name: copy pg_hba.conf
+    copy:
+      src: pg_hba.conf
+      dest: /etc/postgresql/14/main/pg_hba.conf
+      owner: postgres
+      group: postgres
+      mode: 0640
+
+  - name: Restart postgresql@14-main.service
+    ansible.builtin.service:
+      name: postgresql@14-main.service
+      state: restarted
+
+  #- name: Create postgres database
+  #  become: true
+  #  become_user: postgres
+  #  postgresql_db:
+  #    name: ttt
